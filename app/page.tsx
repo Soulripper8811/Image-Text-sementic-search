@@ -1,32 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Home() {
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const router = useRouter();
 
-  async function handleSubmit(e: any) {
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    setPreview(imageUrl);
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
 
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json();
-    setMessage(data.message);
-    setLoading(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Upload failed");
+      }
+
+      // ✅ Success Toast
+      toast.success("Product uploaded successfully 🎉");
+
+      // ✅ Clear form
+      formRef.current?.reset();
+      setPreview(null);
+    } catch (error: any) {
+      toast.error(error.message || "Something went wrong ❌");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -39,12 +65,31 @@ export default function Home() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+            {/* Image Upload */}
             <div className="space-y-2">
               <Label>Product Image</Label>
-              <Input type="file" name="image" required />
+              <Input
+                type="file"
+                name="image"
+                accept="image/*"
+                required
+                onChange={handleImageChange}
+              />
             </div>
 
+            {/* Preview */}
+            {preview && (
+              <div className="flex justify-center">
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-40 h-40 object-cover rounded-xl border shadow"
+                />
+              </div>
+            )}
+
+            {/* Product Name */}
             <div className="space-y-2">
               <Label>Product Name</Label>
               <Input
@@ -55,6 +100,7 @@ export default function Home() {
               />
             </div>
 
+            {/* Description */}
             <div className="space-y-2">
               <Label>Description</Label>
               <Textarea
@@ -64,6 +110,7 @@ export default function Home() {
               />
             </div>
 
+            {/* Price */}
             <div className="space-y-2">
               <Label>Price (₹)</Label>
               <Input
@@ -81,19 +128,15 @@ export default function Home() {
             >
               {loading ? "Uploading..." : "Upload Product"}
             </Button>
+
             <Button
-              className=""
-              onClick={() => {
-                router.push("/search");
-              }}
+              type="button"
+              className="w-full"
+              onClick={() => router.push("/search")}
             >
-              search
+              Search
             </Button>
           </form>
-
-          {message && (
-            <p className="mt-4 text-sm text-center text-green-600">{message}</p>
-          )}
         </CardContent>
       </Card>
     </div>

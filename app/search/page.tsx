@@ -6,56 +6,91 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
+import { Product } from "@/lib/types";
 
 export default function SearchPage() {
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
-  async function handleSearch(e: any) {
+  const router = useRouter();
+
+  async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
 
-    const res = await fetch("/api/search", {
+    const res = await fetch("/api/search-image", {
       method: "POST",
       body: formData,
     });
 
     const data = await res.json();
+    console.log(data);
     setResults(data);
     setLoading(false);
   }
-  const router = useRouter();
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removePreview() {
+    setPreview(null);
+  }
 
   return (
     <div className="min-h-screen bg-muted/40 p-6">
-      <Button
-        className=""
-        onClick={() => {
-          router.push("/");
-        }}
-      >
-        back
-      </Button>
-      <div className="max-w-5xl mx-auto">
-        {/* Heading */}
+      <Button onClick={() => router.push("/")}>Back to upload</Button>
+
+      <div className="max-w-5xl mx-auto mt-6">
         <h1 className="text-3xl font-semibold mb-6 text-center">
-          Search Products
+          Image Search
         </h1>
 
         {/* Search Form */}
-        <form onSubmit={handleSearch} className="flex gap-3 mb-8">
-          <Input
-            type="text"
-            name="query"
-            placeholder="Search for products..."
-            required
-            className="rounded-xl"
-          />
-          <Button type="submit" className="rounded-xl" disabled={loading}>
-            {loading ? "Searching..." : "Search"}
-          </Button>
+        <form onSubmit={handleSearch} className="flex flex-col gap-4 mb-8">
+          <div className="flex gap-3">
+            <Input
+              type="file"
+              name="image"
+              accept="image/*"
+              required
+              className="rounded-xl"
+              onChange={handleImageChange}
+            />
+            <Button type="submit" disabled={loading}>
+              {loading ? "Searching..." : "Search"}
+            </Button>
+          </div>
+
+          {/* Image Preview */}
+          {preview && (
+            <div className="relative w-60">
+              <img
+                src={preview}
+                alt="Preview"
+                className="rounded-xl shadow-md object-cover"
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute top-2 right-2"
+                onClick={removePreview}
+              >
+                ✕
+              </Button>
+            </div>
+          )}
         </form>
 
         {/* Results */}
@@ -69,21 +104,13 @@ export default function SearchPage() {
                 <CardContent className="p-4 space-y-3">
                   <img
                     src={`data:image/jpeg;base64,${item.image_base64}`}
-                    alt={item.name}
+                    alt="Result"
                     className="rounded-xl w-full h-40 object-cover"
                   />
 
-                  <div>
-                    <h3 className="font-semibold text-lg">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
-
                   <div className="flex justify-between items-center">
-                    <p className="font-bold text-primary">₹ {item.price}</p>
                     <Badge variant="secondary">
-                      Score: {item.distance?.toFixed(2)}
+                      Similarity: {item.distance?.toFixed(4)}
                     </Badge>
                   </div>
                 </CardContent>
@@ -94,7 +121,7 @@ export default function SearchPage() {
 
         {!loading && results.length === 0 && (
           <p className="text-center text-muted-foreground mt-10">
-            No results yet. Try searching for something!
+            Upload an image to find similar results.
           </p>
         )}
       </div>

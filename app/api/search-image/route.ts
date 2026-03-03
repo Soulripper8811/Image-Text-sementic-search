@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       ORDER BY embedding <-> $1
       LIMIT 6
       `,
-      [vectorString]
+      [vectorString],
     );
 
     return NextResponse.json(result.rows);

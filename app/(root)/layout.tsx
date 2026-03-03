@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, User, Settings, Album } from "lucide-react";
+import { Menu, Settings, Album, ChartArea } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Image Search", href: "/", icon: Album },
-  { name: "Profile", href: "/profile", icon: User },
+  { name: "Chatbots", href: "/chatbots", icon: ChartArea },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

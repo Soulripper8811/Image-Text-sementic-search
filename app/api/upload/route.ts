@@ -1,65 +1,88 @@
-// import { NextRequest, NextResponse } from "next/server";
-// import { generateEmbedding } from "@/lib/gemini";
-// import { pool } from "@/lib/db";
-
 import { pool } from "@/lib/db";
 import { generateImageEmbedding } from "@/lib/gemini";
 import { NextRequest, NextResponse } from "next/server";
 
-// export async function POST(req: NextRequest) {
-//   const formData = await req.formData();
+// Helper functions
+function generateRandomName(index: number) {
+  const adjectives = ["Premium", "Smart", "Eco", "Ultra", "Classic", "Modern"];
+  const items = ["Item", "Product", "Gadget", "Accessory", "Gear", "Device"];
 
-//   const file = formData.get("image") as File;
-//   const name = formData.get("name") as string;
-//   const description = formData.get("description") as string;
-//   const price = formData.get("price") as string;
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const item = items[Math.floor(Math.random() * items.length)];
 
-//   const buffer = Buffer.from(await file.arrayBuffer());
-//   const base64Image = buffer.toString("base64");
+  return `${adj} ${item} ${Date.now()}-${index}`;
+}
 
-//   // Embed meaningful product text
-//   const textToEmbed = `${name}. ${description}. Price: ${price}`;
-//   const embedding = await generateEmbedding(textToEmbed);
+function generateRandomDescription() {
+  const descriptions = [
+    "High quality product.",
+    "Best in class performance.",
+    "Limited edition item.",
+    "Top rated customer choice.",
+    "Durable and reliable.",
+    "Value for money product.",
+  ];
 
-//   await pool.query(
-//     `
-//   INSERT INTO products (name, description, price, image_base64, embedding)
-//   VALUES ($1, $2, $3, $4, $5)
-//   `,
-//     [name, description, price, base64Image, `[${embedding.join(",")}]`]
-//   );
+  return descriptions[Math.floor(Math.random() * descriptions.length)];
+}
 
-//   return NextResponse.json({ message: "Product stored successfully" });
-// }
+function generateRandomPrice() {
+  return (Math.floor(Math.random() * 5000) + 500).toString(); // ₹500 - ₹5500
+}
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
+  const files = formData.getAll("image") as File[];
 
-  const file = formData.get("image") as File;
-  const name = formData.get("name") as string;
-  const description = formData.get("description") as string;
-  const price = formData.get("price") as string;
-
-  console.log(file, name, description, price);
-  if (!file) {
-    return NextResponse.json({ error: "No image uploaded" }, { status: 400 });
+  if (!files || files.length === 0) {
+    return NextResponse.json({ error: "No images uploaded" }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const base64Image = buffer.toString("base64");
+  const isBulk = files.length > 1;
 
-  console.log("Image buffer length:", buffer.length);
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file || file.size === 0) continue;
 
-  const embedding = await generateImageEmbedding(base64Image);
-  const vectorString = `[${embedding.join(",")}]`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const base64Image = buffer.toString("base64");
 
-  await pool.query(
-    `
-    INSERT INTO products (name, description, price, image_base64, embedding)
-    VALUES ($1, $2, $3, $4, $5)
-    `,
-    [name, description, price, base64Image, vectorString]
-  );
+      const embedding = await generateImageEmbedding(base64Image);
+      const vectorString = `[${embedding.join(",")}]`;
 
-  return NextResponse.json({ message: "Product stored successfully" });
+      let name: string;
+      let description: string;
+      let price: string;
+
+      if (isBulk) {
+        // 🔥 Generate random data
+        name = generateRandomName(i);
+        description = generateRandomDescription();
+        price = generateRandomPrice();
+      } else {
+        // Normal single upload
+        name = formData.get("name") as string;
+        description = formData.get("description") as string;
+        price = formData.get("price") as string;
+      }
+
+      await pool.query(
+        `
+        INSERT INTO products (name, description, price, image_base64, embedding)
+        VALUES ($1, $2, $3, $4, $5)
+        `,
+        [name, description, price, base64Image, vectorString],
+      );
+    }
+
+    return NextResponse.json({
+      message: isBulk
+        ? `${files.length} products uploaded successfully`
+        : "Product stored successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
 }

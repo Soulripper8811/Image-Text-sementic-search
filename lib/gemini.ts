@@ -33,7 +33,7 @@ export async function generateImageEmbedding(base64: string) {
       input: {
         image: `data:image/jpeg;base64,${base64}`,
       },
-    }
+    },
   )) as { embedding: number[] };
 
   //   console.log("CLIP Output:", output);

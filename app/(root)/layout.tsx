@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { name: "Image Search", href: "/", icon: Album },
   { name: "Chatbots", href: "/chatbots", icon: ChartArea },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Settings", href: "/dbhandler", icon: Settings },
 ];
 
 const Layout = ({ children }: { children: ReactNode }) => {
